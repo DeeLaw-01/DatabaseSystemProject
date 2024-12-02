@@ -5,7 +5,7 @@ export default function Footer () {
       <div className='max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center'>
         <div className='text-center md:text-left mb-4 md:mb-0'>
           <h3 className='text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
-            WeChatBox
+            WeChatRoom
           </h3>
           <p className='text-sm text-gray-400'>Connect. Share. Chat.</p>
         </div>
@@ -31,7 +31,7 @@ export default function Footer () {
         </nav>
       </div>
       <div className='mt-8 text-center text-sm text-gray-500'>
-        © {new Date().getFullYear()} WeChatBox. All rights reserved.
+        © {new Date().getFullYear()} WeChatRoom. All rights reserved.
       </div>
     </footer>
   )

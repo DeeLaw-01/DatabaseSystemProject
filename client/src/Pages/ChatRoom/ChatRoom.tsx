@@ -67,7 +67,7 @@ export default function Chatroom () {
         {
           id: 3,
           user: 'Abdullah',
-          text: 'Welcome to WeChatBox!',
+          text: 'Welcome to WeChatRoom!',
           timestamp: '2023-05-20T10:02:00Z'
         }
       ]
@@ -120,7 +120,7 @@ export default function Chatroom () {
           <Link to='/' className='flex items-center space-x-2 mb-6'>
             <MessageSquare className='w-8 h-8 text-purple-400' />
             <span className='text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
-              WeChatBox
+              WeChatRoom
             </span>
           </Link>
           <nav className='flex-grow'>

@@ -30,12 +30,12 @@ export default function Signup () {
       <Link to='/' className='flex items-center space-x-2 mb-8'>
         <MessageSquare className='w-8 h-8 text-purple-400' />
         <span className='text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
-          WeChatBox
+          WeChatRoom
         </span>
       </Link>
       <div className='w-full max-w-md bg-black bg-opacity-50 p-8 rounded-lg shadow-lg'>
         <h1 className='text-3xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
-          Sign Up for WeChatBox
+          Sign Up for WeChatRoom
         </h1>
         <form onSubmit={handleSubmit} className='space-y-4'>
           <div>

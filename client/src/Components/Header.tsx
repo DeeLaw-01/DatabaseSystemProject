@@ -16,7 +16,7 @@ export default function Header () {
         <Link to='/' className='flex items-center space-x-2'>
           <MessageSquare className='w-8 h-8 text-purple-400' />
           <span className='text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
-            WeChatBox
+            WeChatRoom
           </span>
         </Link>
 

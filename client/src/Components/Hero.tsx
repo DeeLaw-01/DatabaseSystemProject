@@ -20,7 +20,7 @@ export default function Hero () {
           </AnimatedGradientText>
         </div>
         <h1 className='text-6xl md:text-8xl mb-6 font-light bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-500 to-purple-400 '>
-          Welcome to <span className='italic font-bold  '>WeChatBox</span>
+          Welcome to <span className='italic font-bold  '>WeChatRoom</span>
         </h1>
         <p className='text-xl md:text-2xl mb-8 max-w-2xl mx-auto'>
           Connect with everyone in a single, vibrant chatbox. Share text,

@@ -34,7 +34,7 @@ export default function Features () {
     >
       <div className='max-w-6xl mx-auto'>
         <h2 className='text-5xl md:text-6xl font-bold mb-24 text-center bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
-          Why Choose WeChatBox?
+          Why Choose WeChatRoom?
         </h2>
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8'>
           {features.map((feature, index) => (
