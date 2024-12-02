@@ -1,8 +1,7 @@
-
 import { Link } from 'react-router-dom'
 export default function Footer () {
   return (
-    <footer className='bg-black bg-opacity-50 py-8 px-4'>
+    <footer className='bg-gradient-to-b from-purple-900 to-gray-800  py-8 px-4'>
       <div className='max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center'>
         <div className='text-center md:text-left mb-4 md:mb-0'>
           <h3 className='text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>

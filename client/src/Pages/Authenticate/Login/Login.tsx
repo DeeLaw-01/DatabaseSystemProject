@@ -4,21 +4,24 @@ import { Button } from '../../../Components/ui/button.tsx'
 import { Input } from '../../../Components/ui/input.tsx'
 import { MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import AuthStore from '../../../ZustandStore/AuthStore.tsx'
 
 export default function Login () {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const setUser = AuthStore(state => state.setUser)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically handle the login logic
+    //If success
+    setUser({ userName: 'deelaw', email: email })
     console.log('Login attempted with:', email, password)
     navigate('/')
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 flex flex-col justify-center items-center p-4'>
+    <div className='min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-pink-900 flex flex-col justify-center items-center p-4 bg-gradient-size animate-gradient'>
       <Link to='/' className='flex items-center space-x-2 mb-8'>
         <MessageSquare className='w-8 h-8 text-purple-400' />
         <span className='text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>

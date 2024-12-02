@@ -26,7 +26,7 @@ export default function Signup () {
   }
 
   return (
-    <div className='min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 flex flex-col justify-center items-center p-4'>
+    <div className='min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-pink-900 flex flex-col justify-center items-center p-4 animate-gradient bg-gradient-size'>
       <Link to='/' className='flex items-center space-x-2 mb-8'>
         <MessageSquare className='w-8 h-8 text-purple-400' />
         <span className='text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>

@@ -1,17 +1,14 @@
-import Header from '../../Components/Header.tsx'
 import Hero from '../../Components/Hero.tsx'
 import Features from '../../Components/Features.tsx'
-import Footer from '../../Components/Footer.tsx'
-
+import Particles from '../../Components/ui/particles.tsx'
 export default function Home () {
   return (
-    <div className='min-h-screen bg-gradient-to-br from-purple-900 via-black to-purple-900 text-white'>
-      <Header />
+    <div className='min-h-screen bg-gradient-to-t  from-purple-900  to-slate-900 text-white bg-gradient-size animate-gradient relative '>
       <main>
         <Hero />
         <Features />
       </main>
-      <Footer />
+      <Particles className='absolute inset-0' quantity={100} ease={80} />
     </div>
   )
 }

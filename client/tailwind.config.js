@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: ['class'],
-    content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: ['class'],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
   	extend: {
   		borderRadius: {
@@ -50,8 +50,30 @@ export default {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			}
+  		},
+  		animation: {
+  			gradient: 'gradient 8s linear infinite'
+  		},
+  		keyframes: {
+  			gradient: {
+  				'0%': {
+  					backgroundPosition: '0% 50%'
+  				},
+  				'50%': {
+  					backgroundPosition: '100% 50%'
+  				},
+  				'100%': {
+  					backgroundPosition: '0% 50%'
+  				},
+  				to: {
+  					backgroundPosition: 'var(--bg-size) 0'
+  				}
+  			}
+  		},
+  		backgroundSize: {
+  			'gradient-size': '200%'
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")]
+  plugins: [require('tailwindcss-animate')]
 }
