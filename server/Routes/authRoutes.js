@@ -1,48 +1,81 @@
-const express = require('express')
-const { authenticateUser, registerUser } = require('../services/authService') // Import services
+import express from 'express'
+import dbpool from '../database.js'
 
 const router = express.Router()
 
-// Login route
-router.post('/login', async (req, res) => {
+// Authentication
+router.post('/authenticate', async (req, res) => {
   const { email, password } = req.body
 
+  // Input validation
+  if (!email || !password) {
+    return res
+      .status(400)
+      .json({ success: false, message: 'Email and password are required.' })
+  }
+
   try {
-    const user = await authenticateUser(email, password)
+    // Query to compare email and password
+    const query = `SELECT * FROM auth WHERE email = ? AND password = ?`
+    const [rows] = await dbpool.execute(query, [email, password])
 
-    if (user.error) {
-      return res.status(401).json({ message: user.error })
+    if (rows.length > 0) {
+      // Successful authentication
+      res.status(200).json({ success: true, user: rows[0] })
+    } else {
+      // No matching user found
+      res
+        .status(401)
+        .json({ success: false, message: 'Invalid email or password.' })
     }
-
-    return res.json({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      last_login: user.last_login
+  } catch (error) {
+    // Handle database or other errors
+    console.error('Error authenticating user:', error)
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while authenticating the user.'
     })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'Internal server error' })
   }
 })
 
-// Register route
+// Registration
 router.post('/register', async (req, res) => {
-  const { username, email, password } = req.body
+  const { email, password, username } = req.body
+
+  // Input validation
+  if (!email || !password || !username) {
+    return res.status(400).json({
+      success: false,
+      message: 'Email, password and username are required.'
+    })
+  }
 
   try {
-    const result = await registerUser(username, email, password)
-
-    if (result.error) {
-      return res.status(400).json({ message: result.error })
-    }
-
-    return res.status(201).json({ message: result.message })
+    // Query to compare email and password
+    const query = `INSERT INTO auth (email, password, username) VALUES (?, ?, ?)`
+    const [rows] = await dbpool.execute(query, [email, password, username])
+    console.log('User registered successfully')
+    res
+      .status(201)
+      .json({ success: true, message: 'User registered successfully' })
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ message: 'Internal server error' })
+    if (error.code === 'ER_DUP_ENTRY') {
+      let message = ''
+      if (error.sqlMessage.includes('email')) {
+        message = 'Email already exists.'
+      }
+      if (error.sqlMessage.includes('username')) {
+        message = 'Username already exists.'
+      }
+      return res.status(409).json({ success: false, message: message })
+    }
+    // Handle database or other errors
+    console.error('Error registering user:', error)
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while registering the user.'
+    })
   }
 })
 
-module.exports = router
+export default router

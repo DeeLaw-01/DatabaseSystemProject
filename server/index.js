@@ -1,15 +1,28 @@
-const express = require('express')
-const authRoutes = require('./routes/authRoutes') // Import authentication routes
+import express from 'express'
+import bodyParser from 'body-parser'
+import authRoutes from './Routes/authRoutes.js'
+import cors from 'cors'
+
 
 const app = express()
+app.use(cors({ origin: '*' }))
 
-app.use(express.json()) // Middleware to parse JSON requests
+// Middleware
+app.use(bodyParser.json())
 
-// Auth Routes
-app.use('/api/auth', authRoutes)
+// Routes
+app.use('/auth', authRoutes)
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack) // Log the error
+  res
+    .status(500)
+    .json({ success: false, message: 'An internal server error occurred.' })
+})
 
 // Start server
-const PORT = 3000
+const PORT = process.env.PORT || 3000
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
+  console.log(`Server running on port ${PORT}`)
 })
