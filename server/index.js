@@ -182,3 +182,7 @@ async function getActiveUsers () {
 // Routes
 app.use('/auth', authRoutes)
 app.use('/messages', messageRoutes)
+
+app.use('/', (req, res) => {
+  res.send('Welcome to the WeChatRoom API')
+})
