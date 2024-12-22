@@ -4,7 +4,8 @@ import mongoose from 'mongoose'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import authRoutes from './Routes/authroutes.js'
-import User from './models/User.js' // Import the User model
+import User from './models/User.js'
+import ActiveUser from './models/ActiveUser.js'
 
 dotenv.config()
 
@@ -39,56 +40,79 @@ const io = new Server(expressServer, {
 
 // Socket.IO Event Handling
 io.on('connection', socket => {
-  // On User Join (Add user to the database)
-  socket.on('join', async name => {
+  // On User Join (Add user to the active users collection)
+  socket.on('join', async id => {
     console.log(`User ${socket.id} connected`)
-    console.log('Name:', name)
-    if (name) {
-      const user = new User({ name, socketId: socket.id })
-      console.log(socket.id)
-      await user.save()
-      io.emit('chatMessage', buildMsg(ADMIN, `Welcome ${name} to the chat!`))
+    console.log('ID:', id)
+    if (id) {
+      const user = await User.findOne({ _id: id })
+      console.log(user)
+      if (user) {
+        await ActiveUser.findOneAndUpdate(
+          { user: user._id },
+          { socketId: socket.id },
+          { upsert: true, new: true }
+        )
+        io.emit(
+          'chatMessage',
+          buildMsg(ADMIN, `Welcome ${user.username} to the chat!`)
+        )
+        io.emit('userList', await getActiveUsers()) // Send updated user list
+      }
     }
   })
 
   // On User Send Message
   socket.on('sendMessage', async message => {
     console.log('Message:', message)
-    const user = await User.findOne({ socketId: socket.id })
-    if (user) {
-      io.emit('chatMessage', buildMsg(user.name, message.text, user._id))
+    const activeUser = await ActiveUser.findOne({
+      socketId: socket.id
+    }).populate('user')
+    if (activeUser) {
+      const { user } = activeUser
+      io.emit('chatMessage', buildMsg(user.name, message.text, user))
     }
   })
 
-  // On User Disconnect (Remove from DB)
+  // On User Disconnect (Remove from active users collection)
   socket.on('disconnect', async () => {
-    const user = await User.findOneAndDelete({ socketId: socket.id })
-    if (user) {
-      io.emit('chatMessage', buildMsg(ADMIN, `${user.name} has left the chat`))
-      io.emit('userList', await getUsers()) // Send updated user list
+    const activeUser = await ActiveUser.findOneAndDelete({
+      socketId: socket.id
+    })
+    if (activeUser) {
+      const user = await User.findById(activeUser.user)
+      if (user) {
+        io.emit(
+          'chatMessage',
+          buildMsg(ADMIN, `${user.name} has left the chat`)
+        )
+        io.emit('userList', await getActiveUsers()) // Send updated user list
+      }
     }
     console.log(`User ${socket.id} disconnected`)
   })
 })
 
 // Helper functions
-function buildMsg (name, text, userId) {
+function buildMsg (name, text, user) {
   return {
-    name,
+    name: (user && user.username) || name,
     text,
     time: new Intl.DateTimeFormat('default', {
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric'
-    }).format(new Date()),
-    user: userId,
-    messageId: Date.now().toLocaleString()
+    })
+      .format(new Date())
+      .toString(),
+    userID: (user && user._id) || 'SERVER',
+    messageId: Date.now().toString()
   }
 }
 
-async function getUsers () {
-  const users = await User.find()
-  return users.map(user => user.name)
+async function getActiveUsers () {
+  const activeUsers = await ActiveUser.find().populate('user', 'name')
+  return activeUsers.map(activeUser => activeUser.user.name)
 }
 
 // Routes

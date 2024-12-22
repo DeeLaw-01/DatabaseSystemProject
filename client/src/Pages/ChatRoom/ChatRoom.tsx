@@ -57,7 +57,7 @@ export default function Chatroom () {
 
     // Automatically join the chat room
     if (user?.userName) {
-      socket.emit('join', user.userName)
+      socket.emit('join', user.id)
     }
 
     socket.on('chatMessage', (message: any) => {
@@ -269,6 +269,13 @@ export default function Chatroom () {
             </Button>
           </div>
         </form>
+        <Button
+          onClick={() => {
+            console.log(user)
+          }}
+        >
+          Click for user
+        </Button>
       </main>
 
       {/* Right Sidebar */}
