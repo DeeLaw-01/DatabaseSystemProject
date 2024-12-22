@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   MessageSquare,
   Send,
@@ -13,13 +13,14 @@ import { Input } from '../../Components/ui/input.tsx'
 import { ScrollArea } from '../../Components/ui/scroll-area.tsx'
 import AuthStore from '../../ZustandStore/AuthStore.tsx'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { io } from 'socket.io-client'
 
 interface Message {
   name: string
   text?: string
   timestamp: string
-  userId: string
+  userID: string
   messageId: string
 }
 
@@ -35,40 +36,89 @@ export default function Chatroom () {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [socket, setSocket] = useState(io(import.meta.env.VITE_BASE_URI))
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
+  const [expandedMessages, setExpandedMessages] = useState<Set<number>>(
+    new Set()
+  )
+  const [isConnected, setIsConnected] = useState(true)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+
+  const toggleMessageExpansion = (index: number) => {
+    setExpandedMessages(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(index)) {
+        newSet.delete(index)
+      } else {
+        newSet.add(index)
+      }
+      return newSet
+    })
+  }
 
   useEffect(() => {
-    // Fetch online users from the API
-    const fetchOnlineUsers = async () => {
-      try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/users`
-        )
-        if (!response.ok) {
-          throw new Error('Network response was not ok')
-        }
-        const data = await response.json()
-        setOnlineUsers(data.users)
-      } catch (error) {
-        console.error('Error fetching online users:', error)
-      }
-    }
-
-    fetchOnlineUsers()
-
     // Automatically join the chat room
     if (user?.userName) {
       socket.emit('join', user.id)
     }
+
+    // Fetch previous messages
+    const fetchMessages = async () => {
+      setLoading(true)
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BASE_URI}/messages`
+        )
+        console.log('Messages:', response.data)
+        setMessages([...response.data])
+      } catch (error) {
+        console.error('Error fetching messages:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchMessages()
+
+    socket.on('connect', () => {
+      setIsConnected(true)
+    })
+
+    socket.on('disconnect', () => {
+      setIsConnected(false)
+    })
 
     socket.on('chatMessage', (message: any) => {
       console.log('Received message:', message)
       setMessages(prevMessages => [...prevMessages, message])
     })
 
+    socket.on('userList', (users: string[]) => {
+      console.log('Online users:', users)
+      setOnlineUsers(users)
+    })
+
+    const checkSocketConnection = () => {
+      if (socket.connected) {
+        socket.emit('ping', () => {
+          setIsConnected(true)
+        })
+      } else {
+        setIsConnected(false)
+      }
+    }
+
+    const interval = setInterval(checkSocketConnection, 1000)
+
     return () => {
+      clearInterval(interval)
       socket.disconnect()
     }
   }, [])
+
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
+    }
+  }, [messages])
 
   const handleSendMessage = (e: any) => {
     e.preventDefault()
@@ -78,7 +128,7 @@ export default function Chatroom () {
         text: newMessage,
         timestamp: new Date().toISOString()
       }
-
+      console.log('Check timestamp:', messageData)
       // Emit the message to the server
       socket.emit('sendMessage', messageData)
       setNewMessage('')
@@ -102,7 +152,7 @@ export default function Chatroom () {
         }
         return newTime
       })
-    }, 5000)
+    }, 1000)
 
     // Cleanup on component unmount (clear the timer)
     return () => clearInterval(timer)
@@ -158,23 +208,38 @@ export default function Chatroom () {
               Online Users
             </h2>
             <ul className='space-y-2'>
-              {onlineUsers.map((user, index) => (
-                <li key={index} className='flex items-center space-x-2'>
-                  <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                  {/* @ts-ignore */}
-                  <span className='text-white'>{user.username}</span>
+              {onlineUsers.length > 0 ? (
+                onlineUsers.map((user, index) => (
+                  <li key={index} className='flex items-center space-x-2'>
+                    <div className='w-2 h-2 bg-green-500 rounded-full'></div>
+                    {/* @ts-ignore */}
+                    <span className='text-white'>{user}</span>
+                  </li>
+                ))
+              ) : (
+                <li className='flex items-center space-x-2'>
+                  <span className='text-white/80 italic text-sm'>
+                    No users online
+                  </span>
                 </li>
-              ))}
+              )}
             </ul>
           </nav>
         </div>
         <div className='mt-auto space-y-2 text-white'>
-          <Button variant='ghost' className='w-full justify-start'>
+          <Button
+            variant='ghost'
+            className='w-full justify-start'
+            onClick={() => {
+              navigate('/coming-soon')
+            }}
+          >
             <Settings className='w-4 h-4 mr-2' />
             Settings
           </Button>
           <Button
             onClick={() => {
+              socket.emit('leave') // Emit leave event
               navigate('/')
             }}
             variant='ghost'
@@ -203,10 +268,19 @@ export default function Chatroom () {
 
       {/* Main Chat Area */}
       <main className='flex-grow flex flex-col'>
-        <header className='bg-black bg-opacity-50 p-4  '>
+        <header className='bg-black bg-opacity-50 p-4 flex justify-between items-center'>
           <h1 className='text-2xl font-bold text-white'>General Chat</h1>
+          <div
+            className={`text-sm ${
+              isConnected ? 'text-green-500' : 'text-red-500'
+            }`}
+          >
+            {isConnected
+              ? 'Connected'
+              : 'Disconnected. Please refresh the page.'}
+          </div>
         </header>
-        <ScrollArea className='flex-grow p-4'>
+        <ScrollArea ref={scrollAreaRef} className='flex-grow p-4'>
           {loading ? (
             <div className='flex justify-center flex-col text-white align-middle items-center h-full'>
               <div className='animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500'></div>
@@ -214,37 +288,77 @@ export default function Chatroom () {
             </div>
           ) : (
             <div className='space-y-4'>
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`flex items-start space-x-2 ${
-                    msg.userId === user?.id ? 'justify-end' : ''
-                  }`}
-                >
-                  {msg.userId !== user?.id && (
-                    <div className='w-8 h-8 bg-purple-500 text-white font-base rounded-full flex items-center align-middle justify-center'>
-                      {msg.name.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+              {messages.map((msg, index) => {
+                const isSystemMessage = msg.userID === 'SERVER'
+                const isCurrentUser = msg.userID === user?.id
+                const isExpanded = expandedMessages.has(index)
+                const shouldShowReadMore =
+                  msg.text && msg.text.length > 60 && !isExpanded
+
+                return (
                   <div
-                    className={`${
-                      msg.userId === user?.id
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-black bg-opacity-50 text-white'
-                    } rounded-lg p-3 max-w-[80%]`}
+                    key={index}
+                    className={`flex items-start space-x-2  text-wrap ${
+                      isCurrentUser
+                        ? 'justify-end'
+                        : isSystemMessage
+                        ? 'justify-center'
+                        : ''
+                    }`}
                   >
-                    <p className='font-semibold text-purple-400 text-xs'>
-                      {msg.name}
-                    </p>
-                    {msg.text && <p>{msg.text}</p>}
-                    <div className='flex justify-end'>
-                      <p className='text-xs text-gray-400 mt-1'>
-                        {msg.timestamp}
-                      </p>
+                    {!isSystemMessage && !isCurrentUser && (
+                      <div className='w-8 h-8 bg-purple-500 text-white font-base rounded-full flex items-center justify-center'>
+                        {msg.name?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div
+                      className={`${
+                        isSystemMessage
+                          ? ' text-white/70 text-xs md:text-sm  text-center'
+                          : isCurrentUser
+                          ? 'bg-black text-white'
+                          : 'bg-black bg-opacity-50 text-white'
+                      } rounded-lg p-3 max-w-72 break-words`}
+                    >
+                      {!isSystemMessage && (
+                        <p className='font-semibold text-purple-400 text-xs '>
+                          {msg.name}
+                        </p>
+                      )}
+                      {msg.text && (
+                        <p className='my-1'>
+                          {shouldShowReadMore
+                            ? `${msg.text.substring(0, 60)}...`
+                            : msg.text}
+                          {shouldShowReadMore && (
+                            <span
+                              className='text-blue-500 cursor-pointer text-sm'
+                              onClick={() => toggleMessageExpansion(index)}
+                            >
+                              Read more
+                            </span>
+                          )}
+                          {isExpanded && (
+                            <span
+                              className='text-blue-500 cursor-pointer'
+                              onClick={() => toggleMessageExpansion(index)}
+                            >
+                              Show less
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      <div className='flex justify-end'>
+                        {!isSystemMessage && (
+                          <p className='text-xs text-gray-400 mt-1'>
+                            {msg.timestamp}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </ScrollArea>
@@ -255,6 +369,7 @@ export default function Chatroom () {
         >
           <div className='flex space-x-2'>
             <Input
+              disabled={loading}
               type='text'
               placeholder='Type your message...'
               value={newMessage}
@@ -269,13 +384,6 @@ export default function Chatroom () {
             </Button>
           </div>
         </form>
-        <Button
-          onClick={() => {
-            console.log(user)
-          }}
-        >
-          Click for user
-        </Button>
       </main>
 
       {/* Right Sidebar */}
@@ -301,7 +409,11 @@ export default function Chatroom () {
           <div className='w-24 h-24 bg-purple-500 relative rounded-full flex items-center justify-center text-white text-4xl'>
             {user?.userName.charAt(0).toUpperCase()}
             <div className='flex items-center text-base bottom-2 right-2 absolute space-x-2'>
-              <div className={`w-4 h-4 rounded-full ${'bg-green-400'}`}></div>
+              <div
+                className={`w-4 h-4 rounded-full ${
+                  isConnected ? 'bg-green-500' : 'bg-red-600'
+                }`}
+              ></div>
             </div>
           </div>
           <h2 className='text-2xl font-bold text-white '>{user?.userName}</h2>

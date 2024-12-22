@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
 import { GoogleLogin } from '@react-oauth/google'
 import { jwtDecode } from 'jwt-decode'
+import Modal from '../../../Components/Modal.tsx'
 
 export default function Login () {
   const { toast } = useToast()
@@ -128,7 +129,7 @@ export default function Login () {
             onClick={() => {
               setForgotPassword(true)
             }}
-            className='text-sm text-purple-400 hover:text-purple-300'
+            className='text-sm text-purple-400 hover:text-purple-300 cursor-pointer'
           >
             Forgot password?
           </div>
@@ -154,35 +155,11 @@ export default function Login () {
             </div>
           </p>
         </div>
+        <Modal isOpen={forgotPassword} onClose={() => setForgotPassword(false)}>
+          <h2>LMAO I DON'T CARE</h2>
+          <p>MAKE A NEW ACCOUNT</p>
+        </Modal>
       </div>
-      {forgotPassword && (
-        <AnimatePresence>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => {
-              setForgotPassword(false)
-            }}
-            className='bg-black w-screen h-screen absolute bg-opacity-50 flex items-center align-middle justify-center'
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 1, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 1, y: -10 }}
-              className='w-1/2 h-3/4 rounded-lg p-12  relative  border flex items-center align-middle justify-center   bg-purple-500 '
-            >
-              <X
-                onClick={() => {
-                  setForgotPassword(false)
-                }}
-                className='absolute right-6 top-8 text-red-600 hover:text-white flex items-center align-middle justify-center w-8 h-8 '
-              />
-              <p className='text-6xl'>LMAO I DON'T CARE MAKE A NEW ACCOUNT</p>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
-      )}
     </div>
   )
 }

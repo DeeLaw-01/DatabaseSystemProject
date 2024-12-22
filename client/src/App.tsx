@@ -10,6 +10,7 @@ import Header from './Components/Header.tsx'
 import { Toaster } from './Components/ui/toaster.tsx'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import AuthStore from './ZustandStore/AuthStore.tsx'
+import ComingSoon from './Pages/ComingSoon/ComingSoon.tsx'
 
 function App () {
   const location = useLocation()
@@ -34,6 +35,7 @@ function App () {
           path='/chatroom'
           element={user ? <ChatRoom /> : <Navigate to='/login' />}
         />
+        <Route path='/coming-soon' element={<ComingSoon />} />
       </Routes>
       {!noHeaderFooterPaths.includes(location.pathname) && <Footer />}
       <Toaster />

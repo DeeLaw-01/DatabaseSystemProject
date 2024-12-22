@@ -43,6 +43,17 @@ export default function Signup () {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMessage(null) // Clear previous errors
+    if (username.length < 3 || username.length > 20) {
+      setErrorMessage('Username must be between 3 and 20 characters long.')
+      return
+    }
+    const passwordRegex = /^(?=.*\d).{8,}$/
+    if (!passwordRegex.test(password)) {
+      setErrorMessage(
+        'Password must be at least 8 characters long and contain at least 1 number.'
+      )
+      return
+    }
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match.')
       return
@@ -82,6 +93,7 @@ export default function Signup () {
               value={username}
               onChange={e => setUsername(e.target.value)}
               required
+              max={20}
               className='w-full bg-purple-900 bg-opacity-50 border-purple-700 focus:border-purple-500 text-white'
             />
           </div>

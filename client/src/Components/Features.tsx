@@ -5,24 +5,23 @@ const features = [
     icon: <MessageSquare className='w-12 h-12 mb-4 text-purple-400' />,
     title: 'Real-time Messaging',
     description:
-      'Instantly connect with others through our lightning-fast messaging system.'
+      'Instantly connect with others through our okay-ish messaging system.'
   },
   {
     icon: <Image className='w-12 h-12 mb-4 text-purple-400' />,
-    title: 'Image Sharing',
-    description:
-      'Share your favorite moments with image uploads directly in the chat.'
+    title: 'No Image Sharing',
+    description: 'We are NOT going to store your images on our database LMAO XD'
   },
   {
     icon: <Users className='w-12 h-12 mb-4 text-purple-400' />,
     title: 'No Community',
-    description: "We literally don't have a community. This is just for me."
+    description: "We literally don't have a community. "
   },
   {
     icon: <Zap className='w-12 h-12 mb-4 text-purple-400' />,
-    title: 'Simple & Intuitive',
+    title: 'Simple & Intuitive??',
     description:
-      'Our user-friendly interface makes chatting a breeze for everyone.'
+      'Our single user tested "user-friendly" interface makes chatting a breeze for everyone.'
   }
 ]
 

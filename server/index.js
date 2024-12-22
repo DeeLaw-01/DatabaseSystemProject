@@ -6,6 +6,8 @@ import dotenv from 'dotenv'
 import authRoutes from './Routes/authroutes.js'
 import User from './models/User.js'
 import ActiveUser from './models/ActiveUser.js'
+import Message from './models/Message.js'
+import messageRoutes from './Routes/messageRoutes.js'
 
 dotenv.config()
 
@@ -46,7 +48,6 @@ io.on('connection', socket => {
     console.log('ID:', id)
     if (id) {
       const user = await User.findOne({ _id: id })
-      console.log(user)
       if (user) {
         await ActiveUser.findOneAndUpdate(
           { user: user._id },
@@ -70,8 +71,37 @@ io.on('connection', socket => {
     }).populate('user')
     if (activeUser) {
       const { user } = activeUser
-      io.emit('chatMessage', buildMsg(user.name, message.text, user))
+      const chatMessage = buildMsg(user.name, message.text, user)
+      console.log(chatMessage)
+      io.emit('chatMessage', chatMessage)
+
+      // Save message to the database
+      const newMessage = new Message({
+        name: user.username,
+        userID: user._id,
+        text: message.text,
+        timestamp: chatMessage.timestamp
+      })
+      await newMessage.save()
     }
+  })
+
+  // On User Leave (Remove from active users collection)
+  socket.on('leave', async () => {
+    const activeUser = await ActiveUser.findOneAndDelete({
+      socketId: socket.id
+    })
+    if (activeUser) {
+      const user = await User.findById(activeUser.user)
+      if (user) {
+        io.emit(
+          'chatMessage',
+          buildMsg(ADMIN, `${user.username} has left the chat`)
+        )
+        io.emit('userList', await getActiveUsers()) // Send updated user list
+      }
+    }
+    console.log(`User ${socket.id} left the chat`)
   })
 
   // On User Disconnect (Remove from active users collection)
@@ -91,6 +121,24 @@ io.on('connection', socket => {
     }
     console.log(`User ${socket.id} disconnected`)
   })
+
+  // Error handling
+  socket.on('error', err => {
+    if (err.code === 'ECONNRESET') {
+      console.log(`Connection reset by peer: ${socket.id}`)
+    } else {
+      console.error(`Socket error: ${err.message}`)
+    }
+  })
+})
+
+// Global error handling for uncaught exceptions and unhandled rejections
+process.on('uncaughtException', err => {
+  console.error('Uncaught Exception:', err)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
 })
 
 // Helper functions
@@ -98,7 +146,7 @@ function buildMsg (name, text, user) {
   return {
     name: (user && user.username) || name,
     text,
-    time: new Intl.DateTimeFormat('default', {
+    timestamp: new Intl.DateTimeFormat('default', {
       hour: 'numeric',
       minute: 'numeric',
       second: 'numeric'
@@ -111,25 +159,10 @@ function buildMsg (name, text, user) {
 }
 
 async function getActiveUsers () {
-  const activeUsers = await ActiveUser.find().populate('user', 'name')
-  return activeUsers.map(activeUser => activeUser.user.name)
+  const activeUsers = await ActiveUser.find().populate('user')
+  return activeUsers.map(activeUser => activeUser.user.username)
 }
 
 // Routes
 app.use('/auth', authRoutes)
-
-// API Routes (For Non-Real-Time Communication)
-app.get('/api/users', async (req, res) => {
-  try {
-    const users = await User.find({}, 'username') // Fetch only the username field
-    res.json({ users })
-  } catch (error) {
-    console.error('Error fetching users:', error)
-    res.status(500).json({ error: 'Internal Server Error' })
-  }
-})
-
-app.get('/api/messages', (req, res) => {
-  // Here, you could fetch and return chat history from the database if needed
-  res.json({ messages: [] })
-})
+app.use('/messages', messageRoutes)
