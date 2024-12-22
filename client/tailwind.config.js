@@ -90,6 +90,5 @@ export default {
         'gradient-size': '200%'
       }
     }
-  },
-  plugins: [require('tailwindcss-animate')]
+  }
 }
