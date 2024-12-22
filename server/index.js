@@ -26,7 +26,17 @@ mongoose
 
 // Middleware
 app.use(express.json())
-app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }))
+app.use(
+  cors({
+    credentials: true,
+    origin: [
+      'http://localhost:5173',
+      'https://we-chat-room-tawny.vercel.app',
+      'we-chat-room-tawny.vercel.app',
+      'we-chat-room-n433qqej1-deelaw-01s-projects.vercel.app'
+    ]
+  })
+)
 
 // Start Express Server
 const expressServer = app.listen(PORT, () => {
@@ -36,7 +46,12 @@ const expressServer = app.listen(PORT, () => {
 // Initialize Socket.IO with the same server
 const io = new Server(expressServer, {
   cors: {
-    origin: process.env.CLIENT_URL || 'http://localhost:5173'
+    origin: [
+      'http://localhost:5173',
+      'https://we-chat-room-tawny.vercel.app',
+      'we-chat-room-tawny.vercel.app',
+      'we-chat-room-n433qqej1-deelaw-01s-projects.vercel.app'
+    ]
   }
 })
 
