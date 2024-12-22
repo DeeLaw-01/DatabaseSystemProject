@@ -33,7 +33,7 @@ app.use(
       'http://localhost:5173',
       'https://we-chat-room-tawny.vercel.app',
       'we-chat-room-tawny.vercel.app',
-      'we-chat-room-n433qqej1-deelaw-01s-projects.vercel.app'
+      'https://we-chat-room-n433qqej1-deelaw-01s-projects.vercel.app'
     ]
   })
 )
@@ -50,7 +50,8 @@ const io = new Server(expressServer, {
       'http://localhost:5173',
       'https://we-chat-room-tawny.vercel.app',
       'we-chat-room-tawny.vercel.app',
-      'we-chat-room-n433qqej1-deelaw-01s-projects.vercel.app'
+      'we-chat-room-n433qqej1-deelaw-01s-projects.vercel.app',
+      'https://we-chat-room-tawny.vercel.app/chatroom'
     ]
   }
 })
