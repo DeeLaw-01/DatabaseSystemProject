@@ -2,22 +2,71 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../../Components/ui/button.tsx'
 import { Input } from '../../../Components/ui/input.tsx'
-import { MessageSquare } from 'lucide-react'
+import { MessageSquare, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import AuthStore from '../../../ZustandStore/AuthStore.tsx'
+import axios from 'axios'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useToast } from '@/hooks/use-toast'
+import { GoogleLogin } from '@react-oauth/google'
+import { jwtDecode } from 'jwt-decode'
 
 export default function Login () {
+  const { toast } = useToast()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const setUser = AuthStore(state => state.setUser)
+  const [forgotPassword, setForgotPassword] = useState(false)
+
+  const handleLogin = async (email: string, password?: string) => {
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URI}/auth/login`,
+        {
+          email,
+          password
+        }
+      )
+      console.log('Response:', response)
+      setUser({
+        email: response.data.email,
+        userName: response.data.username,
+        profilePicture: null,
+        id: response.data._id
+      })
+      navigate('/')
+    } catch (error: any) {
+      console.log('Error:', error.response.data.message)
+      toast({
+        title: 'Error logging in',
+        description: `${error.response.data.message}`
+      })
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     //If success
-    setUser({ userName: 'deelaw', email: email })
+    handleLogin(email, password)
     console.log('Login attempted with:', email, password)
-    navigate('/')
+  }
+
+  const handleGoogleLoginSuccess = (response: any) => {
+    console.log('Google login success:', response)
+    const decodedResponse = jwtDecode(response.credential)
+    //@ts-ignore
+    const email = decodedResponse.email
+    handleLogin(email)
+    console.log('Decoded response:', decodedResponse)
+  }
+  const handleGoogleLoginFailure = (error: any) => {
+    console.log('here')
+    console.log('Google login failure:', error)
+    toast({
+      title: 'Error During Google Login',
+      description: `Please try again. ${error}`
+    })
   }
 
   return (
@@ -75,12 +124,14 @@ export default function Login () {
           </Button>
         </form>
         <div className='mt-4 text-center'>
-          <Link
-            to='#'
+          <div
+            onClick={() => {
+              setForgotPassword(true)
+            }}
             className='text-sm text-purple-400 hover:text-purple-300'
           >
             Forgot password?
-          </Link>
+          </div>
         </div>
         <div className='mt-6 text-center'>
           <p className='text-gray-400'>
@@ -91,9 +142,47 @@ export default function Login () {
             >
               Sign up
             </Link>
+            <div className='mt-4 flex justify-center'>
+              <GoogleLogin
+                onSuccess={credentialResponse => {
+                  console.log(credentialResponse)
+                }}
+                onError={() => {
+                  console.log('Login Failed')
+                }}
+              />
+            </div>
           </p>
         </div>
       </div>
+      {forgotPassword && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setForgotPassword(false)
+            }}
+            className='bg-black w-screen h-screen absolute bg-opacity-50 flex items-center align-middle justify-center'
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 1, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 1, y: -10 }}
+              className='w-1/2 h-3/4 rounded-lg p-12  relative  border flex items-center align-middle justify-center   bg-purple-500 '
+            >
+              <X
+                onClick={() => {
+                  setForgotPassword(false)
+                }}
+                className='absolute right-6 top-8 text-red-600 hover:text-white flex items-center align-middle justify-center w-8 h-8 '
+              />
+              <p className='text-6xl'>LMAO I DON'T CARE MAKE A NEW ACCOUNT</p>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      )}
     </div>
   )
 }

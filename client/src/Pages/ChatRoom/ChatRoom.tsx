@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import {
   MessageSquare,
   Send,
@@ -14,90 +13,100 @@ import { Input } from '../../Components/ui/input.tsx'
 import { ScrollArea } from '../../Components/ui/scroll-area.tsx'
 import AuthStore from '../../ZustandStore/AuthStore.tsx'
 import { useNavigate } from 'react-router-dom'
+import { io } from 'socket.io-client'
 
 interface Message {
-  id: number
-  user: string
-  text: string
-  timestamp: string
-}
-
-interface CurrentUser {
   name: string
-  email: string
-  status: 'online' | 'away' | 'offline'
+  text?: string
+  timestamp: string
+  userId: string
+  messageId: string
 }
-
-const onlineUsers = ['Wahab', 'Waleed', 'Abdullah', 'Sarah', 'John']
 
 export default function Chatroom () {
   const navigate = useNavigate()
   const user = AuthStore(state => state.user)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true)
   const [timeSpent, setTimeSpent] = useState(0)
-
-  const currentUser: CurrentUser = {
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    status: 'online'
-  }
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([])
+  const [socket, setSocket] = useState(io(import.meta.env.VITE_BASE_URI))
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768)
 
   useEffect(() => {
-    const fetchMessages = async () => {
-      setLoading(true)
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      const mockMessages: Message[] = [
-        {
-          id: 1,
-          user: 'Wahab',
-          text: 'Hey everyone!',
-          timestamp: '2023-05-20T10:00:00Z'
-        },
-        {
-          id: 2,
-          user: 'Waleed',
-          text: 'Hi Wahab, how are you?',
-          timestamp: '2023-05-20T10:01:00Z'
-        },
-        {
-          id: 3,
-          user: 'Abdullah',
-          text: 'Welcome to WeChatRoom!',
-          timestamp: '2023-05-20T10:02:00Z'
+    // Fetch online users from the API
+    const fetchOnlineUsers = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/users`
+        )
+        if (!response.ok) {
+          throw new Error('Network response was not ok')
         }
-      ]
-      setMessages(mockMessages)
-      setLoading(false)
+        const data = await response.json()
+        setOnlineUsers(data.users)
+      } catch (error) {
+        console.error('Error fetching online users:', error)
+      }
     }
 
-    fetchMessages()
+    fetchOnlineUsers()
 
-    // Start timer for time spent
-    const timer = setInterval(() => {
-      setTimeSpent(prevTime => prevTime + 1)
-    }, 1000)
+    // Automatically join the chat room
+    if (user?.userName) {
+      socket.emit('join', user.userName)
+    }
 
-    return () => clearInterval(timer)
+    socket.on('chatMessage', (message: any) => {
+      console.log('Received message:', message)
+      setMessages(prevMessages => [...prevMessages, message])
+    })
+
+    return () => {
+      socket.disconnect()
+    }
   }, [])
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = (e: any) => {
     e.preventDefault()
     if (newMessage.trim()) {
-      const newMsg: Message = {
-        id: messages.length + 1,
-        user: 'You',
+      const messageData = {
+        user: user?.userName || 'unknown',
         text: newMessage,
         timestamp: new Date().toISOString()
       }
-      setMessages([...messages, newMsg])
+
+      // Emit the message to the server
+      socket.emit('sendMessage', messageData)
       setNewMessage('')
     }
   }
+
+  useEffect(() => {
+    // Retrieve the saved time spent from local storage on initial load
+
+    const savedTimeSpent = localStorage.getItem('timeSpent')
+    if (savedTimeSpent) {
+      setTimeSpent(parseInt(savedTimeSpent))
+    }
+
+    // Start timer for time spent
+    const timer = setInterval(() => {
+      setTimeSpent(prevTime => {
+        const newTime = prevTime + 1
+        if (newTime % 30 === 0) {
+          localStorage.setItem('timeSpent', newTime.toString()) // Save time to local storage as it increments
+        }
+        return newTime
+      })
+    }, 5000)
+
+    // Cleanup on component unmount (clear the timer)
+    return () => clearInterval(timer)
+  }, []) // Empty dependency array ensures this runs only once on mount
 
   const formatTimeSpent = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
@@ -108,21 +117,41 @@ export default function Chatroom () {
       .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
   }
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    window.addEventListener('resize', handleResize)
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
   return (
     <div className='flex h-screen bg-gradient-to-b from-indigo-900 to-slate-900'>
       {/* Left Sidebar */}
       <aside
         className={`${
-          leftSidebarOpen ? 'w-64' : 'w-0'
-        } bg-black bg-opacity-50 p-4 flex flex-col transition-all duration-300 ease-in-out overflow-hidden`}
+          leftSidebarOpen && isMobile
+            ? 'w-80 bg-black bg-opacity-90'
+            : leftSidebarOpen
+            ? 'w-80'
+            : !leftSidebarOpen && isMobile
+            ? 'w-0 opacity-0'
+            : 'w-0 '
+        } bg-black bg-opacity-50 p-4 flex flex-col transition-all duration-300 ease-in-out overflow-hidden z-40
+        ${isMobile ? 'absolute bottom-0 left-0 h-screen' : ''}
+
+        `}
       >
         <div className={`${leftSidebarOpen ? '' : 'opacity-0'}`}>
-          <Link to='/' className='flex items-center space-x-2 mb-6'>
+          <div className='flex items-center space-x-2 mb-6'>
             <MessageSquare className='w-8 h-8 text-purple-400' />
             <span className='text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
               WeChatRoom
             </span>
-          </Link>
+          </div>
           <nav className='flex-grow'>
             <h2 className='text-purple-400 font-semibold mb-2 flex items-center'>
               <Users className='w-4 h-4 mr-2' />
@@ -132,7 +161,8 @@ export default function Chatroom () {
               {onlineUsers.map((user, index) => (
                 <li key={index} className='flex items-center space-x-2'>
                   <div className='w-2 h-2 bg-green-500 rounded-full'></div>
-                  <span className='text-white'>{user}</span>
+                  {/* @ts-ignore */}
+                  <span className='text-white'>{user.username}</span>
                 </li>
               ))}
             </ul>
@@ -148,7 +178,7 @@ export default function Chatroom () {
               navigate('/')
             }}
             variant='ghost'
-            className='w-full justify-start'
+            className='w-full justify-start hover:bg-red-400 bg-red-300 text-black'
           >
             <LogOut className='w-4 h-4 mr-2' />
             Leave Chat
@@ -160,8 +190,13 @@ export default function Chatroom () {
       <Button
         variant='ghost'
         size='icon'
-        className='absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white'
-        onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+        className='absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white z-50'
+        onClick={() => {
+          if (rightSidebarOpen && isMobile) {
+            setRightSidebarOpen(!rightSidebarOpen)
+          }
+          setLeftSidebarOpen(!leftSidebarOpen)
+        }}
       >
         {leftSidebarOpen ? <ChevronLeft /> : <ChevronRight />}
       </Button>
@@ -179,17 +214,34 @@ export default function Chatroom () {
             </div>
           ) : (
             <div className='space-y-4'>
-              {messages.map(msg => (
-                <div key={msg.id} className='flex items-start space-x-2'>
-                  <div className='w-8 h-8 bg-purple-500 text-white font-base rounded-full flex items-center align-middle justify-center'>
-                    {msg.user.charAt(0).toUpperCase()}
-                  </div>
-                  <div className='bg-black bg-opacity-50 rounded-lg p-3 max-w-[80%]'>
-                    <p className='font-semibold text-purple-400'>{msg.user}</p>
-                    <p className='text-white'>{msg.text}</p>
-                    <p className='text-xs text-gray-400 mt-1'>
-                      {new Date(msg.timestamp).toLocaleString()}
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`flex items-start space-x-2 ${
+                    msg.userId === user?.id ? 'justify-end' : ''
+                  }`}
+                >
+                  {msg.userId !== user?.id && (
+                    <div className='w-8 h-8 bg-purple-500 text-white font-base rounded-full flex items-center align-middle justify-center'>
+                      {msg.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div
+                    className={`${
+                      msg.userId === user?.id
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-black bg-opacity-50 text-white'
+                    } rounded-lg p-3 max-w-[80%]`}
+                  >
+                    <p className='font-semibold text-purple-400 text-xs'>
+                      {msg.name}
                     </p>
+                    {msg.text && <p>{msg.text}</p>}
+                    <div className='flex justify-end'>
+                      <p className='text-xs text-gray-400 mt-1'>
+                        {msg.timestamp}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -223,8 +275,16 @@ export default function Chatroom () {
 
       <aside
         className={`${
-          rightSidebarOpen ? 'w-80' : 'w-0'
-        } bg-black bg-opacity-50 p-4 flex flex-col items-center align-middle justify-center  transition-all duration-300 ease-in-out overflow-hidden `}
+          rightSidebarOpen && isMobile
+            ? 'w-80 bg-black bg-opacity-90'
+            : rightSidebarOpen
+            ? 'w-80'
+            : !rightSidebarOpen && isMobile
+            ? 'w-0 opacity-0'
+            : 'w-0 '
+        } bg-black bg-opacity-50 p-4 flex flex-col items-center align-middle justify-center  transition-all duration-300 ease-in-out overflow-hidden ${
+          isMobile ? 'absolute bottom-0 right-0 h-screen' : ''
+        }  `}
       >
         <div
           className={`flex flex-col items-center space-y-4 mb-12 transition-opacity duration-75  ${
@@ -234,20 +294,14 @@ export default function Chatroom () {
           <div className='w-24 h-24 bg-purple-500 relative rounded-full flex items-center justify-center text-white text-4xl'>
             {user?.userName.charAt(0).toUpperCase()}
             <div className='flex items-center text-base bottom-2 right-2 absolute space-x-2'>
-              <div
-                className={`w-4 h-4 rounded-full ${
-                  currentUser.status === 'online'
-                    ? 'bg-green-400'
-                    : 'bg-gray-400'
-                }`}
-              ></div>
+              <div className={`w-4 h-4 rounded-full ${'bg-green-400'}`}></div>
             </div>
           </div>
-          <h2 className='text-2xl font-bold text-white'>{user?.userName}</h2>
+          <h2 className='text-2xl font-bold text-white '>{user?.userName}</h2>
           <p className='text-purple-400'>{user?.email}</p>
 
           <div className='text-white'>
-            <p>Time spent: {formatTimeSpent(timeSpent)}</p>
+            <p>Time Online: {formatTimeSpent(timeSpent)}</p>
           </div>
         </div>
       </aside>
@@ -256,8 +310,13 @@ export default function Chatroom () {
       <Button
         variant='ghost'
         size='icon'
-        className='absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white'
-        onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+        className='absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white z-50'
+        onClick={() => {
+          if (leftSidebarOpen && isMobile) {
+            setLeftSidebarOpen(!leftSidebarOpen)
+          }
+          setRightSidebarOpen(!rightSidebarOpen)
+        }}
       >
         {rightSidebarOpen ? <ChevronRight /> : <ChevronLeft />}
       </Button>

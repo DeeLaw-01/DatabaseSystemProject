@@ -1,28 +1,53 @@
-'use client'
-
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../../Components/ui/button.tsx'
 import { Input } from '../../../Components/ui/input.tsx'
 import { MessageSquare } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
+
 export default function Signup () {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handleRegister = async (
+    email: string,
+    password: string,
+    username: string
+  ) => {
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_BASE_URI}/auth/register`,
+        {
+          email,
+          password,
+          username
+        }
+      )
+      console.log('Response:', response)
+      navigate('/login')
+    } catch (error: any) {
+      if (error.response) {
+        const { message } = error.response.data
+        setErrorMessage(message)
+      } else {
+        setErrorMessage('An unexpected error occurred. Please try again later.')
+      }
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Here you would typically handle the signup logic
-    console.log('Signup attempted with:', {
-      username,
-      email,
-      password,
-      confirmPassword
-    })
-    navigate('/')
+    setErrorMessage(null) // Clear previous errors
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.')
+      return
+    }
+    handleRegister(email, password, username)
   }
 
   return (
@@ -37,6 +62,11 @@ export default function Signup () {
         <h1 className='text-3xl font-bold text-center mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-white'>
           Sign Up for WeChatRoom
         </h1>
+        {errorMessage && (
+          <div className='mb-4 text-red-500 text-sm text-center bg-red-800 bg-opacity-50 p-2 rounded'>
+            {errorMessage}
+          </div>
+        )}
         <form onSubmit={handleSubmit} className='space-y-4'>
           <div>
             <label

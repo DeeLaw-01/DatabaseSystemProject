@@ -1,37 +1,38 @@
-import express from 'express'
-import http from 'http'
-import WebSocket from 'ws'
+import { Server } from 'socket.io'
+import { createServer } from 'http'
 
-const app = express()
-const server = http.createServer(app)
-const wss = new WebSocket.Server({ server })
+import dotenv from 'dotenv'
 
-let clients = []
+dotenv.config()
 
-wss.on('connection', ws => {
-  console.log('new client connected')
-  clients.push(ws)
+// Create a new HTTP server to attach Socket.IO
+const httpServer = createServer((req, res) => {
+  res.writeHead(404)
+  res.end()
+})
+const io = new Server(httpServer, {
+  cors: {
+    origin: ['http://localhost:5173', 'vercelhosting'], // Replace with your actual frontend origins
+    methods: ['GET', 'POST']
+  }
+})
 
-  ws.on('message', message => {
-    console.log(`Received message => ${message}`)
-    const parsedMessage = JSON.parse(message)
-    console.log('Parsed Message: ', parsedMessage)
+// Event listeners
+io.on('connection', socket => {
+  console.log(`User connected: ${socket.id}`)
 
-    // Broadcast to all clients
-    clients.forEach(client => {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(parsedMessage))
-      }
-    })
+  // Listen for a chat message
+  socket.on('chatMessage', data => {
+    console.log('Message received:', data)
+    // Broadcast the message to all connected clients
+    io.emit('chatMessage', data)
   })
 
-  ws.on('close', () => {
-    console.log('Client disconnected')
-    clients = clients.filter(client => client !== ws)
+  // Handle user disconnection
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`)
   })
 })
 
-const PORT = 3001
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`)
-})
+// Export the HTTP server to use in `index.js`
+export default httpServer
